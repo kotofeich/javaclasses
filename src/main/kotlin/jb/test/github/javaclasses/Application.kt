@@ -4,85 +4,117 @@ package jb.test.github.javaclasses
  * Created by ksenia on 6/3/17.
  */
 
-import javax.xml.ws.http.HTTPException
-import  com.github.kittinunf.fuel.httpGet
 import  com.beust.klaxon.Parser
 import  com.beust.klaxon.JsonArray
 import  com.beust.klaxon.JsonObject
 import  com.xenomachina.argparser.ArgParser
 
 
-
 class ParsedArgs(parser: ArgParser) {
 
-    val repoName by parser.storing("repo name")
-    val ownerId by parser.storing("owner")
+    val config by parser.storing("config with token")
     val N by parser.storing("top N class names by frequency") { toInt() }
-
+    val verbose by parser.flagging("-v", "--verbose", help = "extensive output")
 }
 
-fun passJavaFile(jsonName : JsonObject) : String? {
-    val name = jsonName.get("path").toString()
 
-    val name_split = name.split(".")
-    if (name_split.size > 1 && name_split[0].isNotEmpty()) {
-        if (name_split.last().equals("java")) {
-            return name.split("/").last().split(".").first()
-        }
-        return null
-    }
-    return null
-}
-
-@Throws(HTTPException::class)
-fun getHttpResult(fullName : String, stringRequest : String, prefix : String = "https://api.github.com")
-        : StringBuilder{
-    val fullRestRequest = listOf(prefix,"repos",fullName,stringRequest).joinToString("/")
-    val (_, response, result) = fullRestRequest.httpGet().responseString()
-    if (response.httpStatusCode != 200) {
-        throw HTTPException(response.httpStatusCode)
-    }
-    return StringBuilder(result.get())
-}
-
-fun printOutTopKeys(sortedPairs: List<Pair<String,Int>>, N : Int )  {
-    var i = 0
-    var lastVal = 0
-
-    for ((key, v) in sortedPairs)   {
-        if (i < N-1) {
-            println(key + " " + v)
-        }
-        else if (i == N-1) {
-            println(key + " " + v)
-            lastVal = v
-        }
-        else if (v == lastVal) {
-            println(key + " " + v)
-        }
-        else {
-            return
-        }
-        i += 1
-    }
-}
 fun main(args: Array<String>) {
 
     val parsedArgs : ParsedArgs = ParsedArgs(ArgParser(args))
-    val parser: Parser = Parser()
-    val fullName : String = parsedArgs.ownerId+'/'+parsedArgs.repoName
+    val config : String = parsedArgs.config
+    val token = parseToken(config)
+    var page = ""
+    var lastPage = ""
+    val counterMap = mutableMapOf<String, Int> ()
+    val restCommunicator = RestCommunicator(token)
+    var processedCounter = 0
+    do{
+        var reposRequestString = "search/repositories?q=language:java"
+        if (page.isNotEmpty()) {
+            reposRequestString += "&page=" + page
+        }
 
-    val repoGet = getHttpResult(fullName, "git/refs/heads/master")
-    val commitJson = parser.parse(repoGet) as JsonObject
-    val objectJson = commitJson.get("object") as JsonObject
-    val sha = objectJson.get("sha")
-    val shaTrees = getHttpResult(fullName, "git/trees/"+sha+"?recursive=1")
-    val shaJson = parser.parse(shaTrees) as JsonObject
-    val treesJsonArray = shaJson.get("tree") as JsonArray<JsonObject>
-    val javaFiles = treesJsonArray.mapNotNull {
-        passJavaFile( it )
+        val repoGet = restCommunicator.getHttpResult(reposRequestString)
+        val parser: Parser = Parser()
+        val javaRepos = (parser.parse(repoGet.content) as JsonObject)
+                .getOrDefault("items", JsonArray<JsonObject>()) as JsonArray<JsonObject>
+        for (repo in javaRepos) {
+            processRepos(repo, restCommunicator, parsedArgs, counterMap)
+            processedCounter += 1
+            if (parsedArgs.verbose) {
+                println("total repos counted: " + processedCounter.toString())
+            }
+
+        }
+        page = repoGet.nextPage
+        lastPage = repoGet.lastPage
+        val uniqFrequencyVals = setOf(counterMap
+                .toList()
+                .sortedBy { it.second }
+                .asReversed()
+                .map({it.second}))
+        if (parsedArgs.verbose) {
+            print("Current frequency values:")
+            for (x in uniqFrequencyVals) {
+                println(x.toString())
+            }
+        }
+    } while (!page.equals(lastPage))
+
+    println("FINAL:")
+    printOutTopKeys(counterMap
+            .toList()
+            .sortedBy { it.second }
+            .asReversed(),
+            parsedArgs.N)
+
+
+}
+
+private fun processRepos(repo: JsonObject,
+                         restCommunicator: RestCommunicator,
+                         parsedArgs: ParsedArgs,
+                         counterMap: MutableMap<String, Int>) {
+    val parser: Parser = Parser()
+    val repoPath = repo.get("full_name")
+    println("processing: " + repoPath)
+    var repoCurPage = ""
+    var repoLastPage = ""
+    var pagesCounter = 0
+    do {
+        var curRepoRequestString = "search/code?q=class+in:file" +
+                "+language:java+repo:" + repoPath
+        if (repoCurPage.isNotEmpty()) {
+            curRepoRequestString += "&page=" + repoCurPage
+        }
+        val wordSearchGet = restCommunicator
+                .getHttpResult(curRepoRequestString)
+
+        val codeGet = parser.parse(wordSearchGet.content) as JsonObject
+        val items = codeGet.getOrDefault("items", JsonArray<JsonObject>()) as JsonArray<JsonObject>
+        for (item in items) {
+            val name = item.get("name").toString()
+            if (name.split(".")
+                    .last()
+                    .compareTo("java") == 0) {
+                val curRate = counterMap
+                        .getOrPut(name.removeSuffix(".java"), { 1 })
+                counterMap.replace(name, curRate + 1)
+            }
+        }
+        pagesCounter += 1
+        repoCurPage = wordSearchGet.nextPage
+        repoLastPage = wordSearchGet.lastPage
+        if (parsedArgs.verbose) {
+            println("next page " + repoCurPage + " lastPage " + repoLastPage)
+        }
+        Thread.sleep(5000)
+    } while (!repoCurPage.equals(repoLastPage))
+    if (parsedArgs.verbose) {
+        println("processed pages:" + pagesCounter.toString())
     }
-    var grouped = javaFiles.distinct().groupingBy { it }.eachCount().toList()
-    printOutTopKeys(grouped.sortedBy { it.second },parsedArgs.N)
+    if (pagesCounter == 0) {
+        Thread.sleep(5000)
+    }
 
 }

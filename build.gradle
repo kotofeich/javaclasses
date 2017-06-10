@@ -1,12 +1,11 @@
 group 'jb.test.github'
-version '1.0-SNAPSHOT'
+version '1.0'
 
 buildscript {
     ext.kotlin_version = '1.1.2'
 
     repositories {
-        mavenCentral()
-        //jcenter()
+        jcenter()
         
     }
     dependencies {
@@ -16,15 +15,31 @@ buildscript {
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
+apply plugin: 'application'
+
+mainClassName = "jb.test.github.javaclasses.ApplicationKt"
+
+sourceSets {
+    main.java.srcDirs += 'src/main/kotlin/'
+    test.java.srcDirs += 'src/test/kotlin/'
+}
+
+defaultTasks 'jar'
+jar {
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Quickstart',
+                'Implementation-Version': 1.0,
+                'Main-Class': 'jb.test.github.javaclasses.ApplicationKt'
+    }
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+}
 
 sourceCompatibility = 1.8
 
 
 repositories {
-   // mavenCentral()
     jcenter()
 }
-
 
 
 dependencies {
