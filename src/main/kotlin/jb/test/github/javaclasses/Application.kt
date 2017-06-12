@@ -10,17 +10,17 @@ import  com.beust.klaxon.JsonObject
 import  com.xenomachina.argparser.ArgParser
 
 
+
 class ParsedArgs(parser: ArgParser) {
 
     val config by parser.storing("config with token")
     val N by parser.storing("top N class names by frequency") { toInt() }
-    val verbose by parser.flagging("-v", "--verbose", help = "extensive output")
+    val verbose by parser.flagging("-v", "--verbose", help = "verbose output")
 }
 
 
 fun main(args: Array<String>) {
-
-    val parsedArgs: ParsedArgs = ParsedArgs(ArgParser(args))
+    val parsedArgs = ParsedArgs(ArgParser(args))
     val config : String = parsedArgs.config
     val token = parseToken(config)
     var page = ""
@@ -42,31 +42,21 @@ fun main(args: Array<String>) {
             processRepos(repo, restCommunicator, parsedArgs, counterMap)
             processedCounter += 1
             if (parsedArgs.verbose) {
-                println("total repos counted: " + processedCounter.toString())
+                println("number of repos processed: $processedCounter")
             }
-
         }
         page = repoGet.nextPage
-        lastPage = repoGet.lastPage
-        val uniqFrequencyVals = setOf(counterMap
-                .toList()
-                .sortedBy { it.second }
-                .asReversed()
-                .map({it.second}))
-        if (parsedArgs.verbose) {
-            print("Current frequency values:")
-            for (x in uniqFrequencyVals) {
-                println(x.toString())
-            }
+        if (lastPage.isEmpty()) {
+            lastPage = repoGet.lastPage
         }
-    } while (!page.equals(lastPage))
+
+    } while (lastPage.isNotEmpty() &&  processedCounter != lastPage.toInt())
 
     println("FINAL:")
     printOutTopKeys(counterMap
             .toList()
             .sortedBy { it.second }
-            .asReversed(),
-            parsedArgs.N)
+            .asReversed(), parsedArgs.N)
 
 
 }
@@ -75,14 +65,15 @@ private fun processRepos(repo: JsonObject,
                          restCommunicator: RestCommunicator,
                          parsedArgs: ParsedArgs,
                          counterMap: MutableMap<String, Int>,
-                         sleepTime : Long = 5000) {
+                         sleepTime : Long = 4000) {
     val parser: Parser = Parser()
     val repoPath = repo.get("full_name")
-    println("processing: " + repoPath)
-    var repoCurPage = ""
+    println("processing: $repoPath")
+    var repoCurPage = "1"
     var repoLastPage = ""
     var pagesCounter = 0
     do {
+
         var curRepoRequestString = "search/code?q=class+in:file" +
                 "+language:java+repo:" + repoPath
         if (repoCurPage.isNotEmpty()) {
@@ -104,15 +95,19 @@ private fun processRepos(repo: JsonObject,
             }
         }
         pagesCounter += 1
-        repoCurPage = wordSearchGet.nextPage
-        repoLastPage = wordSearchGet.lastPage
-        if (parsedArgs.verbose) {
-            println("next page " + repoCurPage + " lastPage " + repoLastPage)
+        if (repoLastPage.isEmpty()) {
+            repoLastPage = wordSearchGet.lastPage
         }
+        if (parsedArgs.verbose) {
+            println("current page $repoCurPage lastPage $repoLastPage")
+        }
+        repoCurPage = wordSearchGet.nextPage
+
+
         Thread.sleep(sleepTime)
-    } while (!repoCurPage.equals(repoLastPage))
+    } while (repoLastPage.isNotEmpty() && pagesCounter != repoLastPage.toInt())
     if (parsedArgs.verbose) {
-        println("processed pages:" + pagesCounter.toString())
+        println("processed pages: $pagesCounter")
     }
     if (pagesCounter == 0) {
         Thread.sleep(sleepTime)

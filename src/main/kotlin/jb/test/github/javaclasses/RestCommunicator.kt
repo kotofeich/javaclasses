@@ -10,9 +10,8 @@ import javax.xml.ws.http.HTTPException
 class RestCommunicator {
     
     var prefix = "https://api.github.com"
-    var token = "token 7b46403b8cd5994e44449d799eb517b52f4365c2"
-
-    constructor(token : String) {
+    var token = ""
+            constructor(token : String) {
         this.token = "token " + token
     }
 
