@@ -5,3 +5,11 @@ External libraries: <br>
 https://github.com/kittinunf/Fuel <br>
 https://github.com/cbeust/klaxon <br>
 https://github.com/xenomachina/kotlin-argparser <br>
+
+Build
+
+gradle clean build
+
+Run 
+
+java -jar javaclasses-1.0.jar --config PATH_TO_TOKEN -v -N 10
