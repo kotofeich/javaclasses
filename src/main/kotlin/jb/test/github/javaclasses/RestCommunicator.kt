@@ -16,7 +16,7 @@ class RestCommunicator {
         this.token = "token " + token
     }
 
-
+    @Throws(HTTPException::class)
     fun getHttpResult(stringRequest : String)
             : ResponseFeatures {
         val fullRestRequest = listOf(prefix,stringRequest).joinToString("/")

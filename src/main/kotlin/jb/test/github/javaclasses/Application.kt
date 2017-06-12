@@ -20,7 +20,7 @@ class ParsedArgs(parser: ArgParser) {
 
 fun main(args: Array<String>) {
 
-    val parsedArgs : ParsedArgs = ParsedArgs(ArgParser(args))
+    val parsedArgs: ParsedArgs = ParsedArgs(ArgParser(args))
     val config : String = parsedArgs.config
     val token = parseToken(config)
     var page = ""
@@ -74,7 +74,8 @@ fun main(args: Array<String>) {
 private fun processRepos(repo: JsonObject,
                          restCommunicator: RestCommunicator,
                          parsedArgs: ParsedArgs,
-                         counterMap: MutableMap<String, Int>) {
+                         counterMap: MutableMap<String, Int>,
+                         sleepTime : Long = 5000) {
     val parser: Parser = Parser()
     val repoPath = repo.get("full_name")
     println("processing: " + repoPath)
@@ -108,13 +109,13 @@ private fun processRepos(repo: JsonObject,
         if (parsedArgs.verbose) {
             println("next page " + repoCurPage + " lastPage " + repoLastPage)
         }
-        Thread.sleep(5000)
+        Thread.sleep(sleepTime)
     } while (!repoCurPage.equals(repoLastPage))
     if (parsedArgs.verbose) {
         println("processed pages:" + pagesCounter.toString())
     }
     if (pagesCounter == 0) {
-        Thread.sleep(5000)
+        Thread.sleep(sleepTime)
     }
 
 }
