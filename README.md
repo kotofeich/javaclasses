@@ -12,4 +12,4 @@ gradle clean build
 
 Run 
 
-java -jar ./build/libs/javaclasses-1.0.jar --config PATH_TO_TOKEN -v -N 10
+java -jar javaclasses-1.0.jar --config PATH_TO_TOKEN -v -N 10
