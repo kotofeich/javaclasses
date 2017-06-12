@@ -11,5 +11,8 @@ Build
 gradle clean build
 
 Run 
-
+```bash
 java -jar javaclasses-1.0.jar --config PATH_TO_TOKEN -v -N 10
+```
+```$PATH_TO_TOKEN```
+is a file containing OAuth token for GitHub communication (s. https://github.com/settings/tokens)
