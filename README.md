@@ -6,11 +6,12 @@ https://github.com/kittinunf/Fuel <br>
 https://github.com/cbeust/klaxon <br>
 https://github.com/xenomachina/kotlin-argparser <br>
 
-Build
-
+### Build
+```bash
 gradle clean build
+```
 
-Run 
+### Run 
 ```bash
 java -jar javaclasses-1.0.jar --config PATH_TO_TOKEN -v -N 10
 ```
