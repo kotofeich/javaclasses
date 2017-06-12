@@ -1,4 +1,4 @@
-Use this module to get the top N most popular public java classes in a repository belonging to a certain user.
+Use this module to scan the available GitHub search results for top N most popular public java classes.
 If there are more than N classes with the same top usage frequency, all of them will be reported.
 
 External libraries: <br>
