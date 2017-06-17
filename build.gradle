@@ -47,6 +47,7 @@ dependencies {
     ext.fuel_version = '1.7.0'
     ext.result_version = '1.1.0'
     ext.klaxon_version = '0.30'
+    ext.kotlin_logger_version = '1.4.4'
     
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile group: 'junit', name: 'junit', version: '4.12'
@@ -54,6 +55,8 @@ dependencies {
     compile "com.github.kittinunf.result:result:$result_version"
     compile "com.beust:klaxon:$klaxon_version"
     compile "com.xenomachina:kotlin-argparser:$kotlin_argparser_version"
+    compile "org.slf4j:slf4j-simple:1.7.9"
+    compile "io.github.microutils:kotlin-logging:$kotlin_logger_version"
 
 }
 
