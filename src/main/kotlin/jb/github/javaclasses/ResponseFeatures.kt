@@ -1,4 +1,4 @@
-package jb.test.github.javaclasses
+package jb.github.javaclasses
 
 /**
  * Created by ksenia on 6/10/17.

@@ -1,4 +1,4 @@
-package jb.test.github.javaclasses
+package jb.github.javaclasses
 
 import com.github.kittinunf.fuel.httpGet
 import mu.KotlinLogging
@@ -8,31 +8,28 @@ import javax.xml.ws.http.HTTPException
  * Created by ksenia on 6/7/17.
  */
 
-class RestCommunicator {
+class RestCommunicator(var token: String) {
     
     var prefix = "https://api.github.com"
-    var token = ""
-            constructor(token : String) {
-        this.token = "token " + token
-    }
     var requestsCnt = 0
-    val maxTry = 3
-    val exceptionSleepTime = 10000
+    val exceptionSleepTime = 100000
 
     private val logger = KotlinLogging.logger {}
 
 
     @Throws(HTTPException::class)
-    fun getHttpResult(stringRequest : String)
+    fun getHttpResult(stringRequest : String, maxTry: Int = 3)
             : ResponseFeatures {
         val fullRestRequest = listOf(prefix, stringRequest).joinToString("/")
-        var repeat = true
         var tryCount = 0
-        while (repeat) {
+        while (true) {
             try {
+                val h = if (token.isNotEmpty()) {
+                    mapOf("Authorization" to "token " + token)
+                } else null
                 val (request, response, result) = fullRestRequest
                         .httpGet()
-                        .header(mapOf("Authorization" to token))
+                        .header(h)
                         .responseString()
 
                 if (response.httpStatusCode != 200) {
@@ -47,14 +44,12 @@ class RestCommunicator {
                 return ResponseFeatures(result.get(), link.orEmpty())
             } catch (e: HTTPException) {
                 tryCount += 1
-                if (tryCount < maxTry) {
-                    repeat = false
+                if (tryCount == maxTry) {
+                    throw HTTPException(e.statusCode)
                 }
                 Thread.sleep(exceptionSleepTime.toLong())
             }
 
         }
-       return ResponseFeatures()
-
     }
 }

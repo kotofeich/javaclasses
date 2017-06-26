@@ -1,4 +1,4 @@
-package jb.test.github.javaclasses
+package jb.github.javaclasses
 
 /**
  * Created by ksenia on 6/3/17.
@@ -10,6 +10,8 @@ import  com.beust.klaxon.JsonObject
 import  com.xenomachina.argparser.ArgParser
 /*import  com.xenomachina.argparser.default*/
 import  mu.KotlinLogging
+import java.io.BufferedReader
+import java.io.FileReader
 
 
 class ParsedArgs(parser: ArgParser) {
@@ -19,15 +21,23 @@ class ParsedArgs(parser: ArgParser) {
 /*
     val reload by parser.storing("--reload", help = "reload from log").default(null)
 */
-
+    fun parseToken(configPath : String) : String {
+        val br = BufferedReader(FileReader(configPath))
+        val line = br.readLine()
+        if (line.isEmpty()) {
+            println("Empty token!")
+        }
+    return line
+    }
 }
+
 
 private val logger = KotlinLogging.logger {}
 
 fun main(args: Array<String>) {
     val parsedArgs = ParsedArgs(ArgParser(args))
     val config : String = parsedArgs.config
-    val token = parseToken(config)
+    val token = parsedArgs.parseToken(config)
     var page = ""
     var lastPage = ""
     val counterMap = mutableMapOf<String, Int> ()
@@ -49,13 +59,12 @@ fun main(args: Array<String>) {
     }*/
     do{
         var reposRequestString = "search/repositories?q=language:java+size" +
-                ":>1000+pushed:>2014-06-01+stars:>10"
+                ":>1000+pushed:>2017-06-01+stars:>10"
         if (page.isNotEmpty()) {
             reposRequestString += "&page=" + page
         }
         else page = "1"
         logger.info {"repos page: $page"}
-        logger.info {"processed repos counter: $processedReposCounter"}
         val repoGet = restCommunicator.getHttpResult(reposRequestString)
         val parser: Parser = Parser()
         val javaRepos = (parser.parse(repoGet.content) as JsonObject)
@@ -70,24 +79,26 @@ fun main(args: Array<String>) {
             }
              processRepos(repo, restCommunicator, counterMap, curRepoPage)
             */
-
             processRepos(repo, restCommunicator, counterMap)
             processedReposCounter += 1
+            logger.info {"processed repos counter: $processedReposCounter"}
         }
         page = repoGet.nextPage
         if (lastPage.isEmpty()) {
             lastPage = repoGet.lastPage
         }
 
-    } while (lastPage.isNotEmpty() &&  processedReposCounter != lastPage.toInt())
+    } while (lastPage.isNotEmpty() &&  page != lastPage)
 
     println("total sent requests: " + restCommunicator.requestsCnt.toString())
     println("FINAL:")
-    printOutTopKeys(counterMap
+    counterMap
             .toList()
-            .sortedBy { it.second }
-            .asReversed(), parsedArgs.N)
-
+            .groupBy { it.second  }
+            .toSortedMap(compareByDescending { it })
+            .toList()
+            .subList(0, parsedArgs.N)
+            .map { println(it.first); it.second.map { println( it.first) }; println()}
 
 }
 
