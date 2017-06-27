@@ -17,7 +17,6 @@ import java.io.FileReader
 class ParsedArgs(parser: ArgParser) {
 
     val config by parser.storing("config with token")
-    val N by parser.storing("top N class names by frequency") { toInt() }
 /*
     val reload by parser.storing("--reload", help = "reload from log").default(null)
 */
@@ -87,8 +86,8 @@ fun main(args: Array<String>) {
         if (lastPage.isEmpty()) {
             lastPage = repoGet.lastPage
         }
-
-    } while (lastPage.isNotEmpty() &&  page != lastPage)
+        
+    } while (lastPage.isNotEmpty() &&  page != "1")
 
     println("total sent requests: " + restCommunicator.requestsCnt.toString())
     println("FINAL:")
@@ -97,8 +96,9 @@ fun main(args: Array<String>) {
             .groupBy { it.second  }
             .toSortedMap(compareByDescending { it })
             .toList()
-            .subList(0, parsedArgs.N)
             .map { println(it.first); it.second.map { println( it.first) }; println()}
+
+
 
 }
 
